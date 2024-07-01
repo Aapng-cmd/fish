@@ -5,6 +5,24 @@ import email
 from collections import Counter
 import ssl
 import smtplib
+import argparse
+
+
+parser = argparse.ArgumentParser(description='Clone email\'s form')
+parser.add_argument('-fe', '--first-email', type=str, help='your email (where to read)')
+parser.add_argument('-p', '--password', type=str, help='password to your email (or special API key)')
+parser.add_argument('-r', '--recipient', type=str, help='target email')
+parser.add_argument('-f', '--filter', type=str, help='filter to find email', required=False) # proto
+parser.add_argument('-s', '--server', type=str, help='smtp server from where to send', default="smtp.mail.ru")
+parser.add_argument('--port', type=int, help='port of the server', default=587)
+
+args = parser.parse_args()
+username = args.first_email
+password = args.password
+recipient = args.recipient
+smtp_filter = args.filter
+smtp_server = args.server
+smtp_port = args.port
 
 
 def rev_dict(dic: dict) -> dict:
@@ -99,14 +117,14 @@ def update_content(message):
         # Get the content-type
         content_type = part.get_content_type()
 
-        encoding = "8bit"
         # Determine the new content-transfer-encoding
         if 'plain' in content_type or 'html' in content_type:
             content = part.get_payload()
             mal_content = change_content(content)
             if encoding == 'base64':
-                new_content = base64.b64encode(mal_content.encode()).decode()
-                # new_content = mal_content
+                # new_content = base64.b64encode(mal_content.encode()).decode()
+                encoding = "8bit"
+                new_content = mal_content
             elif encoding == 'quoted-printable':
                 new_content = quopri.encodestring(mal_content.encode()).decode()
             else:
@@ -166,8 +184,7 @@ mail.login(username, password)
 mail.select('inbox')
 
 # Search for emails
-# status, response = mail.search(None, "(FROM 'education@email.ptsecurity.com')")
-status, response = mail.search(None, "(FLAGGED)")
+status, response = mail.search(None, smtp_filter)
 message = ""
 # Iterate over the emails
 for num in response[0].split():
@@ -179,19 +196,15 @@ for num in response[0].split():
     sender = message["From"]
     sender = sender[sender.rfind("<")+1:-1]
     print(f"Sender: {sender}")
-    # Get the email content
-    i = 0
     message = update_content(message)
 
-    # print(message)
-
-    # Break the loop after processing one email
-    break  # This line should be removed if you want to process all emails
+    resend_email(username, password, recipient, smtp_server, message, smtp_port)
+    break
 
 
-resend_email('', '', username, 'smtp.mail.ru', message)
+# resend_email('', '', username, 'smtp.mail.ru', message)
+
 # resend_email(username, password, username, 'smtp.yandex.ru', message, smtp_port=465)
 
-# Close the IMAP connection
 mail.close()
 mail.logout()
