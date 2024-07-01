@@ -170,7 +170,7 @@ mail.select('inbox')
 status, response = mail.search(None, "(FLAGGED)")
 message = ""
 # Iterate over the emails
-for num in response[0].split()[3:]:
+for num in response[0].split():
     res, msg = mail.fetch(num, "(RFC822)")
 
     # Parse the email message
